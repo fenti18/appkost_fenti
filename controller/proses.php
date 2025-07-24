@@ -90,6 +90,76 @@ if(isset($_POST['tambah_barang'])) {
     }
     exit;
 }
+// Assignment Hunian
+if(isset($_POST['assign_hunian'])) {
+    $id_penghuni = intval($_POST['id_penghuni']);
+    $id_kamar = intval($_POST['id_kamar']);
+    $tanggal_masuk = $_POST['tanggal_masuk'];
+    // Validasi double occupancy
+    $cek = mysqli_query($conn, "SELECT * FROM tb_kmr_penghuni WHERE id_kamar='$id_kamar' AND tanggal_keluar IS NULL");
+    if(mysqli_num_rows($cek) > 0) {
+        header('Location: ../admin/admin_hunian.php?error=Kamar sudah terisi'); exit;
+    }
+    $sql = "INSERT INTO tb_kmr_penghuni (id_penghuni, id_kamar, tanggal_masuk) VALUES (?, ?, ?)";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, 'iis', $id_penghuni, $id_kamar, $tanggal_masuk);
+    if(mysqli_stmt_execute($stmt)) {
+        $id_kmr_penghuni = mysqli_insert_id($conn);
+        // Barang bawaan
+        if(isset($_POST['barang_id'])) {
+            foreach($_POST['barang_id'] as $i => $id_barang) {
+                $id_barang = intval($id_barang);
+                $jumlah = intval($_POST['barang_jumlah'][$i]);
+                if($id_barang && $jumlah > 0) {
+                    $sqlb = "INSERT INTO tb_brng_bawaan (id_kmr_penghuni, id_barang, jumlah) VALUES (?, ?, ?)";
+                    $stmtb = mysqli_prepare($conn, $sqlb);
+                    mysqli_stmt_bind_param($stmtb, 'iii', $id_kmr_penghuni, $id_barang, $jumlah);
+                    mysqli_stmt_execute($stmtb);
+                }
+            }
+        }
+        header('Location: ../admin/admin_hunian.php?success=Assignment berhasil');
+    } else {
+        header('Location: ../admin/admin_hunian.php?error=Gagal assign hunian');
+    }
+    exit;
+}
+
+// Proses penghuni keluar kos
+if(isset($_GET['keluar_hunian'])) {
+    $id_kmr_penghuni = intval($_GET['keluar_hunian']);
+    $tgl = date('Y-m-d');
+    // Update tanggal keluar di tb_kmr_penghuni
+    $sql = "UPDATE tb_kmr_penghuni SET tanggal_keluar=? WHERE id_kmr_penghuni=?";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, 'si', $tgl, $id_kmr_penghuni);
+    if(mysqli_stmt_execute($stmt)) {
+        // Update tb_penghuni (tanggal_keluar)
+        $q = mysqli_query($conn, "SELECT id_penghuni FROM tb_kmr_penghuni WHERE id_kmr_penghuni='$id_kmr_penghuni'");
+        $d = mysqli_fetch_assoc($q);
+        mysqli_query($conn, "UPDATE tb_penghuni SET tanggal_keluar='$tgl' WHERE id_penghuni='{$d['id_penghuni']}'");
+        header('Location: ../admin/admin_hunian.php?success=Penghuni keluar diproses');
+    } else {
+        header('Location: ../admin/admin_hunian.php?error=Gagal proses keluar');
+    }
+    exit;
+}
+
+// Pindah kamar
+if(isset($_POST['pindah_kamar'])) {
+    $id_kmr_penghuni = intval($_POST['id_kmr_penghuni']);
+    $tanggal_keluar = $_POST['tanggal_keluar'];
+    // Update tanggal keluar hunian lama
+    $sql = "UPDATE tb_kmr_penghuni SET tanggal_keluar=? WHERE id_kmr_penghuni=?";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, 'si', $tanggal_keluar, $id_kmr_penghuni);
+    if(mysqli_stmt_execute($stmt)) {
+        header('Location: ../admin/admin_hunian.php?success=Pindah kamar diproses');
+    } else {
+        header('Location: ../admin/admin_hunian.php?error=Gagal pindah kamar');
+    }
+    exit;
+}
 
 if(isset($_POST['edit_barang'])) {
     $id = $_POST['id_barang'];
