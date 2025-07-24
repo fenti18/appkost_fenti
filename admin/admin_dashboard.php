@@ -1,4 +1,6 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 include '../config/config.php';
 // Total penghuni
 $q_penghuni = mysqli_query($conn, "SELECT COUNT(*) AS total FROM tb_penghuni WHERE tanggal_keluar IS NULL");
